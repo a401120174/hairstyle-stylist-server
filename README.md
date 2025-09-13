@@ -19,9 +19,13 @@
 src/
 ├── app.ts              # 主應用程式檔案
 ├── controllers/        # 控制器
-│   └── healthController.ts
+│   ├── healthController.ts
+│   └── hairstyleController.ts
 ├── routes/            # 路由定義
-│   └── api.ts
+│   ├── api.ts
+│   └── hairstyle.ts
+├── services/          # 服務層
+│   └── aiService.ts   # Google GenAI 整合
 ├── middleware/        # 自定義中間件
 ├── models/           # 資料模型
 ├── utils/            # 工具函數
@@ -42,7 +46,10 @@ npm install
 ```bash
 PORT=3000
 NODE_ENV=development
+GOOGLE_API_KEY=your-google-api-key-here
 ```
+
+**重要：** 您需要從 [Google AI Studio](https://aistudio.google.com/app/apikey) 取得 Google API 金鑰。
 
 ### 3. 開發模式
 ```bash
@@ -65,6 +72,10 @@ npm start
 - `GET /` - 歡迎訊息
 - `GET /api/health` - 健康檢查
 
+### 髮型 AI 端點
+- `GET /api/hairstyle/prompts` - 取得預設髮型提示範本
+- `POST /api/hairstyle/generate` - 使用 AI 生成新髮型
+
 ### 健康檢查範例回應
 ```json
 {
@@ -73,6 +84,19 @@ npm start
   "timestamp": "2025-09-13T10:30:00.000Z"
 }
 ```
+
+### 髮型生成範例
+```json
+{
+  "userImage": {
+    "base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...",
+    "mimeType": "image/jpeg"
+  },
+  "hairstylePrompt": "Change this person's hairstyle to a modern short bob cut"
+}
+```
+
+詳細的 API 使用說明請參考 [API_GUIDE.md](./API_GUIDE.md)。
 
 ## 開發指令
 
@@ -87,6 +111,7 @@ npm start
 - **Runtime**: Node.js
 - **語言**: TypeScript
 - **框架**: Express.js
+- **AI 服務**: Google Gemini AI (2.5 Flash)
 - **安全性**: Helmet
 - **CORS**: cors
 - **日誌**: Morgan

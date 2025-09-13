@@ -18,7 +18,7 @@ export interface HealthCheckResponse {
   timestamp: string;
 }
 
-// 髮型相關類型定義（範例）
+// 髮型相關類型定義
 export interface HairstyleData {
   id: string;
   name: string;
@@ -37,4 +37,21 @@ export interface User {
   avatar?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// AI 相關類型定義
+export interface UserImage {
+  base64: string;
+  mimeType: string;
+}
+
+export interface HairstyleChangeRequest {
+  userImage: UserImage;
+  hairstylePrompt: string;
+}
+
+export interface HairstyleChangeResponse {
+  success: boolean;
+  generatedImageBase64?: string;
+  message: string;
 }

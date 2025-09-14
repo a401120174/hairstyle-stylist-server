@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Users can only read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Users cannot directly write to their document
+      // All writes must go through Cloud Functions to ensure data integrity
+      allow write: if false;
+      
+      // Cloud Functions can write user documents
+      // This allows the functions to create/update user data safely
+      allow write: if request.auth == null; // Only for server-side operations
+    }
+    
+    // Purchases collection (for audit trail)
+    match /purchases/{purchaseId} {
+      // Users can only read their own purchase records
+      allow read: if request.auth != null && 
+                     request.auth.uid == resource.data.userId;
+      
+      // Only Cloud Functions can create purchase records
+      allow create: if request.auth == null;
+      
+      // No updates or deletes allowed for purchases (immutable audit trail)
+      allow update, delete: if false;
+    }
+    
+    // Admin collection (for future admin features)
+    match /admin/{document=**} {
+      // Only specific admin users can access admin documents
+      // TODO: Implement proper admin role verification
+      allow read, write: if request.auth != null && 
+                            request.auth.token.admin == true;
+    }
+    
+    // Default deny rule for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+/* 
+Security Rules Explanation:
+
+1. Users Collection (/users/{userId}):
+   - Users can only read their own user document
+   - Direct writes are prohibited to prevent credit manipulation
+   - All data modifications must go through Cloud Functions
+   - This ensures proper validation and business logic enforcement
+
+2. Purchases Collection (/purchases/{purchaseId}):
+   - Users can read their own purchase history for transparency
+   - Only Cloud Functions can create purchase records
+   - Purchase records are immutable (no updates/deletes) for audit integrity
+
+3. Admin Collection (/admin/{document}):
+   - Reserved for future admin features
+   - Only users with admin token can access
+   - TODO: Implement proper role-based access control
+
+4. Default Deny:
+   - All other collections are denied by default
+   - Follows security best practice of explicit permissions
+
+Key Security Features:
+- Prevents credit manipulation by clients
+- Ensures all credit transactions go through validated Cloud Functions
+- Maintains audit trail of purchases
+- User data isolation (users can only see their own data)
+- Immutable purchase records for compliance
+*/

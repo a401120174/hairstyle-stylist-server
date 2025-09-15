@@ -1,6 +1,6 @@
 # 🎨 AI 換髮型 App - API 文檔
 
-這份文檔詳細介紹了 AI 換髮型 App 後端提供的所有 API 端點以及前端調用方式。
+這份文檔詳細介紹了 AI 換髮型 App 後端提供的所有 API 端點。
 
 ## 📋 目錄
 
@@ -10,24 +10,25 @@
 - [核心 API](#核心-api)
   - [getUserCredits - 獲取用戶點數](#getuserCredits---獲取用戶點數)
   - [tryHairstyle - 嘗試髮型](#tryhairstyle---嘗試髮型)
+  - [getHairstyleTemplates - 獲取髮型模板列表](#gethairstyletemplates---獲取髮型模板列表)
 - [內購相關 API](#內購相關-api)
   - [verifyIosPurchase - iOS 內購驗證](#verifyiospurchase---ios-內購驗證)
   - [verifyAndroidPurchase - Android 內購驗證](#verifyandroidpurchase---android-內購驗證)
 - [管理員 API](#管理員-api)
+  - [uploadHairstyleTemplate - 上傳髮型模板](#uploadhairstyletemplate---上傳髮型模板)
   - [addCreditsToUser - 管理員加點](#addcreditstouser---管理員加點)
 - [錯誤處理](#錯誤處理)
-- [使用範例](#使用範例)
 
 ## 🛠️ 環境配置
 
 ### 開發環境
-- **Base URL**: `http://127.0.0.1:5001/demo-hairstyle-app/us-central1`
+- **Base URL**: `http://127.0.0.1:5001/hairstyle-stylish/us-central1`
 - **Firebase Auth**: `http://127.0.0.1:9099`
 - **Firestore**: `http://127.0.0.1:8080`
 - **管理界面**: `http://127.0.0.1:4000`
 
 ### 生產環境
-- **Base URL**: `https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net`
+- **Base URL**: `https://us-central1-hairstyle-stylish.cloudfunctions.net`
 - **Region**: `us-central1`
 
 ## 📊 API 概覽
@@ -36,35 +37,15 @@
 |---------|------|------|----------|
 | `getUserCredits` | 獲取用戶點數和基本信息 | ✅ 可用 | 是 |
 | `tryHairstyle` | 嘗試 AI 換髮型功能 | ✅ 可用 | 是 |
+| `getHairstyleTemplates` | 獲取可用髮型模板列表 | ✅ 可用 | 否 |
 | `verifyIosPurchase` | iOS 內購驗證 | 🚧 開發中 | 是 |
 | `verifyAndroidPurchase` | Android 內購驗證 | 🚧 開發中 | 是 |
+| `uploadHairstyleTemplate` | 上傳髮型模板（管理員） | ✅ 可用 | 是 |
 | `addCreditsToUser` | 管理員手動加點 | 🚧 開發中 | 是 |
 
 ## 🔐 認證方式
 
-所有 API 都需要用戶通過 Firebase Authentication 登入。在前端調用時，Firebase SDK 會自動處理認證令牌。
-
-### React Native (Expo) 設置
-
-```javascript
-// firebase.config.js
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
-
-const firebaseConfig = {
-  // 你的 Firebase 配置
-};
-
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const functions = getFunctions(app);
-
-// 開發環境連接到 Emulator
-if (__DEV__) {
-  connectFunctionsEmulator(functions, 'localhost', 5001);
-}
-```
+大部分 API 都需要用戶通過 Firebase Authentication 登入。在前端調用時，Firebase SDK 會自動處理認證令牌。
 
 ## 🎯 核心 API
 
@@ -85,161 +66,80 @@ if (__DEV__) {
 ```typescript
 interface GetUserCreditsResponse {
   success: boolean;
-  credits: number;
-  userInfo: {
+  credits?: number;
+  userInfo?: {
     email?: string;
     displayName?: string;
     createdAt?: string;
     lastUsed?: string;
   };
+  error?: string;
 }
-```
-
-#### 🔧 前端調用範例
-
-```javascript
-import { httpsCallable } from 'firebase/functions';
-import { functions } from './firebase.config';
-
-const getUserCredits = httpsCallable(functions, 'getUserCredits');
-
-async function fetchUserCredits() {
-  try {
-    const result = await getUserCredits();
-    const { credits, userInfo } = result.data;
-    
-    console.log(`用戶點數: ${credits}`);
-    console.log('用戶信息:', userInfo);
-    
-    return { credits, userInfo };
-  } catch (error) {
-    console.error('獲取用戶點數失敗:', error);
-    throw error;
-  }
-}
-
-// React Native 組件中使用
-const CreditsDisplay = () => {
-  const [credits, setCredits] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadCredits = async () => {
-      try {
-        const { credits } = await fetchUserCredits();
-        setCredits(credits);
-      } catch (error) {
-        Alert.alert('錯誤', '無法獲取點數信息');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCredits();
-  }, []);
-
-  if (loading) {
-    return <ActivityIndicator size="large" />;
-  }
-
-  return (
-    <View>
-      <Text>剩餘點數: {credits}</Text>
-    </View>
-  );
-};
 ```
 
 ---
 
 ### `tryHairstyle` - 嘗試髮型
 
-扣除 1 個點數並生成 AI 髮型圖片（目前為 MVP 版本，返回模擬圖片）。
+使用 AI 生成新的髮型圖片，需要消耗 1 個點數。
 
 #### 📝 功能描述
 - 驗證用戶是否有足夠點數（至少 1 點）
 - 使用 Firestore Transaction 安全扣除 1 點
-- 返回生成的髮型圖片 URL（目前為模擬圖片）
-- 返回扣點後的餘額
+- 接收用戶照片和髮型選擇，使用 Gemini AI 生成新髮型圖片
+- 返回生成的髮型圖片 URL 和剩餘點數
 
 #### 📤 請求參數
-無需參數（未來可能會添加髮型參數）
+```typescript
+interface TryHairstyleRequest {
+  userPhoto: string;     // Base64 編碼的用戶照片
+  hairstyleKey: string;  // 髮型模板鍵值
+}
+```
+
+**支援的髮型鍵值:**
+- `classic-pompadour` - 經典龐畢度
+- `fade-buzz-cut` - 漸層寸頭
+- `messy-short-curls` - 凌亂短捲髮
+- `short-bob` - 短鮑伯頭
 
 #### 📥 回應格式
 ```typescript
 interface TryHairstyleResponse {
   success: boolean;
-  imageUrl: string;
-  creditsLeft: number;
+  imageUrl?: string;     // 生成的髮型圖片 URL
+  creditsLeft?: number;  // 剩餘點數
+  error?: string;
 }
 ```
 
-#### 🔧 前端調用範例
+---
 
-```javascript
-import { httpsCallable } from 'firebase/functions';
-import { functions } from './firebase.config';
+### `getHairstyleTemplates` - 獲取髮型模板列表
 
-const tryHairstyle = httpsCallable(functions, 'tryHairstyle');
+獲取所有可用的髮型模板信息。
 
-async function generateHairstyle() {
-  try {
-    const result = await tryHairstyle();
-    const { imageUrl, creditsLeft } = result.data;
-    
-    console.log('生成的髮型圖片:', imageUrl);
-    console.log('剩餘點數:', creditsLeft);
-    
-    return { imageUrl, creditsLeft };
-  } catch (error) {
-    if (error.code === 'functions/failed-precondition') {
-      throw new Error('點數不足，請先購買點數');
-    } else if (error.code === 'functions/unauthenticated') {
-      throw new Error('請先登入');
-    } else {
-      throw new Error('生成髮型失敗，請稍後再試');
-    }
-  }
+#### 📝 功能描述
+- 返回所有支援的髮型模板列表
+- 包含髮型鍵值、顯示名稱和可用狀態
+- 不需要用戶認證
+
+#### 📤 請求參數
+無需參數
+
+#### 📥 回應格式
+```typescript
+interface GetHairstyleTemplatesResponse {
+  success: boolean;
+  hairstyles?: HairstyleTemplate[];
+  error?: string;
 }
 
-// React Native 組件中使用
-const HairstyleGenerator = () => {
-  const [loading, setLoading] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState(null);
-  const [credits, setCredits] = useState(0);
-
-  const handleTryHairstyle = async () => {
-    setLoading(true);
-    try {
-      const { imageUrl, creditsLeft } = await generateHairstyle();
-      setGeneratedImage(imageUrl);
-      setCredits(creditsLeft);
-      Alert.alert('成功', '髮型生成完成！');
-    } catch (error) {
-      Alert.alert('錯誤', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <View>
-      <TouchableOpacity 
-        onPress={handleTryHairstyle} 
-        disabled={loading}
-        style={styles.button}
-      >
-        <Text>{loading ? '生成中...' : '嘗試新髮型'}</Text>
-      </TouchableOpacity>
-      
-      {generatedImage && (
-        <Image source={{ uri: generatedImage }} style={styles.image} />
-      )}
-      
-      <Text>剩餘點數: {credits}</Text>
-    </View>
-  );
-};
+interface HairstyleTemplate {
+  key: string;        // 髮型鍵值
+  name: string;       // 顯示名稱
+  available: boolean; // 是否可用
+}
 ```
 
 ## 💳 內購相關 API
@@ -250,35 +150,21 @@ const HairstyleGenerator = () => {
 
 驗證 iOS App Store 內購收據並為用戶帳戶添加點數。
 
-#### 📤 計劃請求參數
+#### 📤 請求參數
 ```typescript
-{
-  receiptData: string; // App Store 收據數據
+interface VerifyPurchaseRequest {
+  receiptData?: string;  // iOS App Store 收據數據
+  productId?: string;    // 產品 ID
 }
 ```
 
-#### 📥 計劃回應格式
+#### 📥 回應格式
 ```typescript
-{
+interface VerifyPurchaseResponse {
   success: boolean;
-  creditsAdded?: number;
-  totalCredits?: number;
+  creditsAdded?: number; // 添加的點數
   error?: string;
-}
-```
-
-#### 🔧 前端調用範例（計劃中）
-```javascript
-// 計劃實現
-const verifyIosPurchase = httpsCallable(functions, 'verifyIosPurchase');
-
-async function handleIosPurchase(receiptData) {
-  try {
-    const result = await verifyIosPurchase({ receiptData });
-    // 處理購買結果
-  } catch (error) {
-    // 處理錯誤
-  }
+  message?: string;
 }
 ```
 
@@ -290,25 +176,59 @@ async function handleIosPurchase(receiptData) {
 
 驗證 Google Play Store 內購並為用戶帳戶添加點數。
 
-#### 📤 計劃請求參數
+#### 📤 請求參數
 ```typescript
-{
-  purchaseToken: string; // Google Play 購買令牌
-  productId: string;     // 產品 ID
+interface VerifyPurchaseRequest {
+  purchaseToken?: string; // Google Play 購買令牌
+  productId?: string;     // 產品 ID
+  packageName?: string;   // 應用包名
 }
 ```
 
-#### 📥 計劃回應格式
+#### 📥 回應格式
 ```typescript
-{
+interface VerifyPurchaseResponse {
   success: boolean;
-  creditsAdded?: number;
-  totalCredits?: number;
+  creditsAdded?: number; // 添加的點數
   error?: string;
+  message?: string;
 }
 ```
 
 ## 👨‍💼 管理員 API
+
+### `uploadHairstyleTemplate` - 上傳髮型模板
+
+**狀態**: ✅ 可用
+
+允許管理員上傳新的髮型模板到 Firebase Storage。
+
+#### 📝 功能描述
+- 上傳髮型模板圖片到 Firebase Storage
+- 設定圖片為公開可訪問
+- 返回上傳後的檔案路徑和公開 URL
+
+#### 📤 請求參數
+```typescript
+interface UploadHairstyleTemplateRequest {
+  hairstyleKey: string;  // 髮型鍵值
+  imageBase64: string;   // Base64 編碼的圖片數據
+  fileName: string;      // 檔案名稱
+}
+```
+
+#### 📥 回應格式
+```typescript
+interface UploadHairstyleTemplateResponse {
+  success: boolean;
+  message?: string;      // 成功訊息
+  filePath?: string;     // Storage 中的檔案路徑
+  publicUrl?: string;    // 公開訪問 URL
+  error?: string;
+}
+```
+
+---
 
 ### `addCreditsToUser` - 管理員加點
 
@@ -316,12 +236,22 @@ async function handleIosPurchase(receiptData) {
 
 允許管理員手動為指定用戶添加點數（用於客戶服務或測試）。
 
-#### 📤 計劃請求參數
+#### 📤 請求參數
 ```typescript
-{
+interface AddCreditsToUserRequest {
   userId: string;   // 目標用戶 ID
   credits: number;  // 要添加的點數
-  reason?: string;  // 添加原因（可選）
+}
+```
+
+#### 📥 回應格式
+```typescript
+interface AddCreditsToUserResponse {
+  success: boolean;
+  creditsAdded?: number; // 實際添加的點數
+  newTotal?: number;     // 用戶新的總點數
+  error?: string;
+  message?: string;
 }
 ```
 
@@ -332,37 +262,51 @@ async function handleIosPurchase(receiptData) {
 | 錯誤代碼 | 描述 | 解決方案 |
 |---------|------|----------|
 | `functions/unauthenticated` | 用戶未登入 | 引導用戶登入 |
-| `functions/failed-precondition` | 點數不足 | 引導用戶購買點數 |
+| `functions/invalid-argument` | 請求參數無效 | 檢查參數格式和必填欄位 |
+| `functions/failed-precondition` | 前置條件失敗（如點數不足） | 根據具體情況處理 |
+| `functions/permission-denied` | 權限不足 | 檢查用戶權限或管理員身份 |
 | `functions/internal` | 服務器內部錯誤 | 稍後重試或聯絡客服 |
 
-### 錯誤處理最佳實踐
+### API 回應狀態
 
-```javascript
-const handleApiCall = async (apiFunction, params = {}) => {
-  try {
-    const result = await apiFunction(params);
-    return result.data;
-  } catch (error) {
-    let userMessage = '發生未知錯誤';
-    
-    switch (error.code) {
-      case 'functions/unauthenticated':
-        userMessage = '請先登入您的帳戶';
-        // 導航到登入頁面
-        break;
-      case 'functions/failed-precondition':
-        userMessage = '點數不足，請先購買點數';
-        // 導航到購買頁面
-        break;
-      case 'functions/internal':
-        userMessage = '服務暫時不可用，請稍後再試';
-        break;
-      default:
-        userMessage = error.message || '發生未知錯誤';
-    }
-    
-    Alert.alert('錯誤', userMessage);
-    throw error;
+所有 API 都會返回包含 `success` 欄位的回應：
+- `success: true` - 操作成功
+- `success: false` - 操作失敗，查看 `error` 或 `message` 欄位了解原因
+
+### 錯誤處理範例
+
+```typescript
+try {
+  const result = await apiFunction(params);
+  if (result.data.success) {
+    // 處理成功情況
+    console.log('操作成功');
+  } else {
+    // 處理業務邏輯錯誤
+    console.error('操作失敗:', result.data.error || result.data.message);
   }
-};
+} catch (error) {
+  // 處理網路或權限錯誤
+  switch (error.code) {
+    case 'functions/unauthenticated':
+      console.error('用戶未登入');
+      break;
+    case 'functions/failed-precondition':
+      console.error('條件不滿足（如點數不足）');
+      break;
+    case 'functions/invalid-argument':
+      console.error('參數錯誤');
+      break;
+    default:
+      console.error('未知錯誤:', error.message);
+  }
+}
 ```
+
+## 📝 使用注意事項
+
+1. **認證要求**: 大部分 API 需要用戶登入，只有 `getHairstyleTemplates` 可以匿名訪問
+2. **點數系統**: 每次使用 `tryHairstyle` 會消耗 1 個點數，新用戶獲得 5 個免費點數
+3. **圖片格式**: 上傳的圖片需要是 Base64 編碼格式
+4. **檔案大小**: 建議上傳的圖片不超過 10MB
+5. **髮型模板**: 目前支援 4 種髮型模板，可透過 `getHairstyleTemplates` 獲取最新列表

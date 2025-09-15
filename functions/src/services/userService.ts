@@ -18,8 +18,8 @@ export async function createNewUser(
 ): Promise<UserData> {
   const newUserData: UserData = {
     credits: DEFAULT_USER_CREDITS,
-    email: email,
-    displayName: displayName,
+    email: email || null,
+    displayName: displayName || null,
     createdAt: admin.firestore.Timestamp.now(),
     lastUsed: admin.firestore.Timestamp.now(),
   };

@@ -6,8 +6,8 @@ import * as functions from "firebase-functions";
  */
 export interface UserData {
   credits: number;
-  email?: string;
-  displayName?: string;
+  email?: string | null;
+  displayName?: string | null;
   createdAt?: admin.firestore.Timestamp;
   lastUsed?: admin.firestore.Timestamp;
 }
@@ -37,8 +37,8 @@ export interface GetUserCreditsResponse {
   success: boolean;
   credits?: number;
   userInfo?: {
-    email?: string;
-    displayName?: string;
+    email?: string | null;
+    displayName?: string | null;
     createdAt?: string;
     lastUsed?: string;
   };

@@ -4,7 +4,6 @@ import * as functions from "firebase-functions";
 import { getUserCreditsService } from "./services/userService";
 import { tryHairstyleService, getHairstyleTemplatesService } from "./services/hairstyleService";
 import { verifyIosPurchaseService, verifyAndroidPurchaseService } from "./services/purchaseService";
-import { uploadHairstyleTemplateService, addCreditsToUserService } from "./services/adminService";
 
 // Import types
 import { 
@@ -13,11 +12,7 @@ import {
   GetUserCreditsResponse,
   VerifyPurchaseRequest,
   VerifyPurchaseResponse,
-  UploadHairstyleTemplateRequest,
-  UploadHairstyleTemplateResponse,
   GetHairstyleTemplatesResponse,
-  AddCreditsToUserRequest,
-  AddCreditsToUserResponse
 } from "./types";
 
 /**
@@ -73,30 +68,10 @@ export const verifyAndroidPurchase = functions.https.onCall(
 );
 
 /**
- * Admin function to upload hairstyle templates to Firebase Storage
- * This function helps upload hairstyle reference images to Storage
- */
-export const uploadHairstyleTemplate = functions.https.onCall(
-  async (data: UploadHairstyleTemplateRequest, context: functions.https.CallableContext): Promise<UploadHairstyleTemplateResponse> => {
-    return uploadHairstyleTemplateService(data, context);
-  }
-);
-
-/**
  * Get list of available hairstyle templates
  */
 export const getHairstyleTemplates = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext): Promise<GetHairstyleTemplatesResponse> => {
     return getHairstyleTemplatesService();
-  }
-);
-
-/**
- * Admin function to manually add credits to a user (for testing/support)
- * TODO: Add proper admin authentication
- */
-export const addCreditsToUser = functions.https.onCall(
-  async (data: AddCreditsToUserRequest, context: functions.https.CallableContext): Promise<AddCreditsToUserResponse> => {
-    return addCreditsToUserService(data, context);
   }
 );

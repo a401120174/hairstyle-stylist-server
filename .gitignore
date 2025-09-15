@@ -1,5 +1,6 @@
 # 依賴項
 node_modules/
+hair/
 **/node_modules/
 
 # 編譯輸出

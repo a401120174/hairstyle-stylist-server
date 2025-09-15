@@ -66,26 +66,6 @@ export interface VerifyPurchaseResponse {
 }
 
 /**
- * Request type for upload hairstyle template
- */
-export interface UploadHairstyleTemplateRequest {
-  hairstyleKey: string;
-  imageBase64: string;
-  fileName: string;
-}
-
-/**
- * Response type for upload hairstyle template
- */
-export interface UploadHairstyleTemplateResponse {
-  success: boolean;
-  message?: string;
-  filePath?: string;
-  publicUrl?: string;
-  error?: string;
-}
-
-/**
  * Hairstyle template info
  */
 export interface HairstyleTemplate {
@@ -102,25 +82,6 @@ export interface GetHairstyleTemplatesResponse {
   success: boolean;
   hairstyles?: HairstyleTemplate[];
   error?: string;
-}
-
-/**
- * Request type for addCreditsToUser function
- */
-export interface AddCreditsToUserRequest {
-  userId: string;
-  credits: number;
-}
-
-/**
- * Response type for addCreditsToUser function
- */
-export interface AddCreditsToUserResponse {
-  success: boolean;
-  creditsAdded?: number;
-  newTotal?: number;
-  error?: string;
-  message?: string;
 }
 
 /**

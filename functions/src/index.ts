@@ -28,6 +28,21 @@ interface TryHairstyleResponse {
 }
 
 /**
+ * Response type for getUserCredits function
+ */
+interface GetUserCreditsResponse {
+  success: boolean;
+  credits?: number;
+  userInfo?: {
+    email?: string;
+    displayName?: string;
+    createdAt?: string;
+    lastUsed?: string;
+  };
+  error?: string;
+}
+
+/**
  * AI Hairstyle Generation Function
  * 
  * This function:
@@ -120,6 +135,88 @@ export const tryHairstyle = functions.https.onCall(
       throw new functions.https.HttpsError(
         "internal",
         "An unexpected error occurred while processing your request"
+      );
+    }
+  }
+);
+
+/**
+ * Get User Credits Function
+ * 
+ * This function:
+ * 1. Verifies the user is authenticated
+ * 2. Retrieves user's current credit balance from Firestore
+ * 3. Returns user info including credits and basic profile data
+ * 4. Creates user document with default credits if it doesn't exist
+ */
+export const getUserCredits = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext): Promise<GetUserCreditsResponse> => {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated to get credits"
+      );
+    }
+
+    const userId = context.auth.uid;
+    const userRef = db.collection("users").doc(userId);
+
+    try {
+      const userDoc = await userRef.get();
+
+      // Create user document if it doesn't exist (first time user)
+      if (!userDoc.exists) {
+        const newUserData: UserData = {
+          credits: 5, // Give new users 5 free credits
+          email: context.auth?.token.email,
+          displayName: context.auth?.token.name,
+          createdAt: admin.firestore.Timestamp.now(),
+          lastUsed: admin.firestore.Timestamp.now(),
+        };
+        
+        await userRef.set(newUserData);
+        
+        functions.logger.info(`New user created with 5 free credits: ${userId}`);
+
+        return {
+          success: true,
+          credits: 5,
+          userInfo: {
+            email: newUserData.email,
+            displayName: newUserData.displayName,
+            createdAt: newUserData.createdAt?.toDate().toISOString(),
+            lastUsed: newUserData.lastUsed?.toDate().toISOString(),
+          }
+        };
+      }
+
+      const userData = userDoc.data() as UserData;
+
+      // Update lastUsed timestamp (optional - for tracking user activity)
+      await userRef.update({
+        lastUsed: admin.firestore.Timestamp.now(),
+      });
+
+      functions.logger.info(`User credits retrieved: ${userId}, credits: ${userData.credits}`);
+
+      return {
+        success: true,
+        credits: userData.credits,
+        userInfo: {
+          email: userData.email,
+          displayName: userData.displayName,
+          createdAt: userData.createdAt?.toDate().toISOString(),
+          lastUsed: userData.lastUsed?.toDate().toISOString(),
+        }
+      };
+
+    } catch (error) {
+      functions.logger.error("Error in getUserCredits function:", error);
+      
+      throw new functions.https.HttpsError(
+        "internal",
+        "An unexpected error occurred while retrieving user credits"
       );
     }
   }

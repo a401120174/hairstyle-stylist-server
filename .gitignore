@@ -1,9 +1,16 @@
 # 依賴項
 node_modules/
+**/node_modules/
 
 # 編譯輸出
 dist/
 build/
+lib/
+functions/lib/
+*.js.map
+
+# TypeScript
+*.tsbuildinfo
 
 # 日誌檔案
 logs/
@@ -11,6 +18,19 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log*
+firestore-debug.log
+firestore-debug.*.log
+firestore.indexes.json.backup
+ui-debug.log
+
+# Google Cloud
+.gcloudignore
 
 # 環境變數檔案
 .env
@@ -18,20 +38,52 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
+
+# API Keys 和密鑰
+serviceAccountKey.json
+**/serviceAccountKey.json
+service-account-*.json
+gcp-key.json
+firebase-adminsdk-*.json
 
 # IDE 檔案
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-*
 
 # 作業系統檔案
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # 測試覆蓋率
 coverage/
+.nyc_output/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
 # 暫存檔案
 tmp/
 temp/
+.tmp/
+
+# ESLint cache
+.eslintcache
+
+# Prettier
+.prettierrc
+.prettierignore
+
+# Local Firebase emulator data
+.firebase-emulators/

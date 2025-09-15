@@ -1,142 +1,39 @@
 import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
 
-// Initialize Firebase Admin SDK
-admin.initializeApp();
+// Import service functions
+import { getUserCreditsService } from "./services/userService";
+import { tryHairstyleService, getHairstyleTemplatesService } from "./services/hairstyleService";
+import { verifyIosPurchaseService, verifyAndroidPurchaseService } from "./services/purchaseService";
+import { uploadHairstyleTemplateService, addCreditsToUserService } from "./services/adminService";
 
-const db = admin.firestore();
-
-/**
- * Represents the structure of a user document in Firestore
- */
-interface UserData {
-  credits: number;
-  email?: string;
-  displayName?: string;
-  createdAt?: admin.firestore.Timestamp;
-  lastUsed?: admin.firestore.Timestamp;
-}
-
-/**
- * Response type for tryHairstyle function
- */
-interface TryHairstyleResponse {
-  success: boolean;
-  imageUrl?: string;
-  creditsLeft?: number;
-  error?: string;
-}
-
-/**
- * Response type for getUserCredits function
- */
-interface GetUserCreditsResponse {
-  success: boolean;
-  credits?: number;
-  userInfo?: {
-    email?: string;
-    displayName?: string;
-    createdAt?: string;
-    lastUsed?: string;
-  };
-  error?: string;
-}
+// Import types
+import { 
+  TryHairstyleRequest, 
+  TryHairstyleResponse,
+  GetUserCreditsResponse,
+  VerifyPurchaseRequest,
+  VerifyPurchaseResponse,
+  UploadHairstyleTemplateRequest,
+  UploadHairstyleTemplateResponse,
+  GetHairstyleTemplatesResponse,
+  AddCreditsToUserRequest,
+  AddCreditsToUserResponse
+} from "./types";
 
 /**
  * AI Hairstyle Generation Function
  * 
  * This function:
  * 1. Verifies the user is authenticated
- * 2. Checks if user has enough credits (at least 1)
- * 3. Deducts 1 credit using Firestore transaction
- * 4. Returns a mock image URL and remaining credits
- * 
- * Future: Will integrate with Gemini API for actual image generation
+ * 2. Validates input parameters (user photo and hairstyle key)
+ * 3. Checks if user has enough credits (at least 1)
+ * 4. Deducts 1 credit using Firestore transaction
+ * 5. Calls Gemini API to generate new hairstyle
+ * 6. Returns the generated image URL and remaining credits
  */
 export const tryHairstyle = functions.https.onCall(
-  async (data: any, context: functions.https.CallableContext): Promise<TryHairstyleResponse> => {
-    // Verify user is authenticated
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated to try hairstyles"
-      );
-    }
-
-    const userId = context.auth.uid;
-    const userRef = db.collection("users").doc(userId);
-
-    try {
-      // Use transaction to safely deduct credits
-      const result = await db.runTransaction(async (transaction: admin.firestore.Transaction) => {
-        const userDoc = await transaction.get(userRef);
-
-        // Create user document if it doesn't exist (first time user)
-        if (!userDoc.exists) {
-          const newUserData: UserData = {
-            credits: 5, // Give new users 5 free credits
-            email: context.auth?.token.email,
-            displayName: context.auth?.token.name,
-            createdAt: admin.firestore.Timestamp.now(),
-            lastUsed: admin.firestore.Timestamp.now(),
-          };
-          transaction.set(userRef, newUserData);
-          
-          // New user gets their first try for free, but still deduct 1 credit
-          transaction.update(userRef, {
-            credits: 4,
-            lastUsed: admin.firestore.Timestamp.now(),
-          });
-          
-          return { creditsLeft: 4 };
-        }
-
-        const userData = userDoc.data() as UserData;
-
-        // Check if user has enough credits
-        if (userData.credits < 1) {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "Insufficient credits. Please purchase more credits to continue."
-          );
-        }
-
-        // Deduct 1 credit
-        const newCredits = userData.credits - 1;
-        transaction.update(userRef, {
-          credits: newCredits,
-          lastUsed: admin.firestore.Timestamp.now(),
-        });
-
-        return { creditsLeft: newCredits };
-      });
-
-      // TODO: Replace with actual Gemini API call
-      // For MVP, return a mock image URL
-      const mockImageUrl = generateMockImageUrl(userId);
-
-      functions.logger.info(
-        `User ${userId} successfully tried hairstyle. Credits left: ${result.creditsLeft}`
-      );
-
-      return {
-        success: true,
-        imageUrl: mockImageUrl,
-        creditsLeft: result.creditsLeft,
-      };
-
-    } catch (error) {
-      functions.logger.error("Error in tryHairstyle function:", error);
-      
-      if (error instanceof functions.https.HttpsError) {
-        throw error;
-      }
-      
-      throw new functions.https.HttpsError(
-        "internal",
-        "An unexpected error occurred while processing your request"
-      );
-    }
+  async (data: TryHairstyleRequest, context: functions.https.CallableContext): Promise<TryHairstyleResponse> => {
+    return tryHairstyleService(data, context);
   }
 );
 
@@ -151,128 +48,17 @@ export const tryHairstyle = functions.https.onCall(
  */
 export const getUserCredits = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext): Promise<GetUserCreditsResponse> => {
-    // Verify user is authenticated
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated to get credits"
-      );
-    }
-
-    const userId = context.auth.uid;
-    const userRef = db.collection("users").doc(userId);
-
-    try {
-      const userDoc = await userRef.get();
-
-      // Create user document if it doesn't exist (first time user)
-      if (!userDoc.exists) {
-        const newUserData: UserData = {
-          credits: 5, // Give new users 5 free credits
-          email: context.auth?.token.email,
-          displayName: context.auth?.token.name,
-          createdAt: admin.firestore.Timestamp.now(),
-          lastUsed: admin.firestore.Timestamp.now(),
-        };
-        
-        await userRef.set(newUserData);
-        
-        functions.logger.info(`New user created with 5 free credits: ${userId}`);
-
-        return {
-          success: true,
-          credits: 5,
-          userInfo: {
-            email: newUserData.email,
-            displayName: newUserData.displayName,
-            createdAt: newUserData.createdAt?.toDate().toISOString(),
-            lastUsed: newUserData.lastUsed?.toDate().toISOString(),
-          }
-        };
-      }
-
-      const userData = userDoc.data() as UserData;
-
-      // Update lastUsed timestamp (optional - for tracking user activity)
-      await userRef.update({
-        lastUsed: admin.firestore.Timestamp.now(),
-      });
-
-      functions.logger.info(`User credits retrieved: ${userId}, credits: ${userData.credits}`);
-
-      return {
-        success: true,
-        credits: userData.credits,
-        userInfo: {
-          email: userData.email,
-          displayName: userData.displayName,
-          createdAt: userData.createdAt?.toDate().toISOString(),
-          lastUsed: userData.lastUsed?.toDate().toISOString(),
-        }
-      };
-
-    } catch (error) {
-      functions.logger.error("Error in getUserCredits function:", error);
-      
-      throw new functions.https.HttpsError(
-        "internal",
-        "An unexpected error occurred while retrieving user credits"
-      );
-    }
+    return getUserCreditsService(context);
   }
 );
-
-/**
- * Generate a mock image URL for MVP
- * TODO: Replace with actual Gemini API integration
- */
-function generateMockImageUrl(userId: string): string {
-  const timestamp = Date.now();
-  const mockStyles = [
-    "modern-short-cut",
-    "classic-bob",
-    "layered-waves",
-    "pixie-cut",
-    "long-curls",
-    "beach-waves"
-  ];
-  
-  const randomStyle = mockStyles[Math.floor(Math.random() * mockStyles.length)];
-  
-  // Return a mock URL that could represent a generated hairstyle image
-  return `https://mock-hairstyle-generator.com/generated/${userId}/${randomStyle}-${timestamp}.jpg`;
-}
 
 /**
  * Verify iOS In-App Purchase
  * TODO: Implement iOS purchase verification with App Store Connect API
  */
 export const verifyIosPurchase = functions.https.onCall(
-  async (data: any, context: functions.https.CallableContext) => {
-    // Verify user is authenticated
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated to verify purchases"
-      );
-    }
-
-    functions.logger.info("iOS purchase verification requested", {
-      userId: context.auth.uid,
-      receiptData: data.receiptData ? "present" : "missing"
-    });
-
-    // TODO: Implement iOS purchase verification
-    // 1. Validate receipt with Apple's servers
-    // 2. Check if purchase is valid and not already processed
-    // 3. Add credits to user account
-    // 4. Store purchase record for audit
-
-    return {
-      success: false,
-      error: "unimplemented",
-      message: "iOS purchase verification is not yet implemented"
-    };
+  async (data: VerifyPurchaseRequest, context: functions.https.CallableContext): Promise<VerifyPurchaseResponse> => {
+    return verifyIosPurchaseService(data, context);
   }
 );
 
@@ -281,31 +67,27 @@ export const verifyIosPurchase = functions.https.onCall(
  * TODO: Implement Android purchase verification with Google Play Console API
  */
 export const verifyAndroidPurchase = functions.https.onCall(
-  async (data: any, context: functions.https.CallableContext) => {
-    // Verify user is authenticated
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated to verify purchases"
-      );
-    }
+  async (data: VerifyPurchaseRequest, context: functions.https.CallableContext): Promise<VerifyPurchaseResponse> => {
+    return verifyAndroidPurchaseService(data, context);
+  }
+);
 
-    functions.logger.info("Android purchase verification requested", {
-      userId: context.auth.uid,
-      purchaseToken: data.purchaseToken ? "present" : "missing"
-    });
+/**
+ * Admin function to upload hairstyle templates to Firebase Storage
+ * This function helps upload hairstyle reference images to Storage
+ */
+export const uploadHairstyleTemplate = functions.https.onCall(
+  async (data: UploadHairstyleTemplateRequest, context: functions.https.CallableContext): Promise<UploadHairstyleTemplateResponse> => {
+    return uploadHairstyleTemplateService(data, context);
+  }
+);
 
-    // TODO: Implement Android purchase verification
-    // 1. Validate purchase token with Google Play API
-    // 2. Check if purchase is valid and not already processed
-    // 3. Add credits to user account
-    // 4. Store purchase record for audit
-
-    return {
-      success: false,
-      error: "unimplemented",
-      message: "Android purchase verification is not yet implemented"
-    };
+/**
+ * Get list of available hairstyle templates
+ */
+export const getHairstyleTemplates = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext): Promise<GetHairstyleTemplatesResponse> => {
+    return getHairstyleTemplatesService();
   }
 );
 
@@ -314,19 +96,7 @@ export const verifyAndroidPurchase = functions.https.onCall(
  * TODO: Add proper admin authentication
  */
 export const addCreditsToUser = functions.https.onCall(
-  async (data: any, context: functions.https.CallableContext) => {
-    // TODO: Implement admin role verification
-    // For now, just log the request
-    functions.logger.warn("Admin function called - not yet implemented", {
-      caller: context.auth?.uid,
-      targetUser: data.userId,
-      creditsToAdd: data.credits
-    });
-
-    return {
-      success: false,
-      error: "unimplemented",
-      message: "Admin functions are not yet implemented"
-    };
+  async (data: AddCreditsToUserRequest, context: functions.https.CallableContext): Promise<AddCreditsToUserResponse> => {
+    return addCreditsToUserService(data, context);
   }
 );

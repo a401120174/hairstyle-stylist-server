@@ -1,0 +1,11 @@
+# 示例圖片使用說明
+
+這是一個示例文本文件，用於示範如何在 Firebase Hosting 中組織圖片文件。
+
+實際使用時，請將真實的圖片文件（.jpg, .png, .webp 等）放置在這個目錄中。
+
+文件名建議：
+- short-bob-blonde.jpg
+- long-curly-brunette.jpg
+- pixie-cut-red.jpg
+- etc.

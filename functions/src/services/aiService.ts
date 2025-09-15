@@ -1,9 +1,14 @@
 import * as functions from "firebase-functions";
 import { genAI, AI_CONFIG } from "../config";
-import { loadHairstyleImage, uploadGeneratedImage } from "./storageService";
+import { loadHairstyleImage } from "./storageService";
 
 /**
  * Generate hairstyle using Gemini 2.5 Flash Image Preview API
+ * Returns base64 data URL for immediate display without saving to storage
+ * @param userPhotoBase64 - User's photo in base64 format
+ * @param hairstyleKey - Hairstyle template key
+ * @param userId - User ID (for logging purposes)
+ * @returns Base64 data URL (data:image/jpeg;base64,...)
  */
 export async function generateHairstyleWithGemini(
   userPhotoBase64: string, 
@@ -62,12 +67,10 @@ export async function generateHairstyleWithGemini(
       if (parts) {
         for (const part of parts) {
           if (part.inlineData) {
-            // Found image data, upload to storage and return URL
-            const imageBuffer = Buffer.from(part.inlineData.data, "base64");
-            const imageUrl = await uploadGeneratedImage(imageBuffer, userId, hairstyleKey);
-            
-            functions.logger.info(`Successfully generated hairstyle ${hairstyleKey} and uploaded to: ${imageUrl}`);
-            return imageUrl;
+            // Return base64 data URL for immediate display
+            const base64DataUrl = `data:image/jpeg;base64,${part.inlineData.data}`;
+            functions.logger.info(`Successfully generated hairstyle ${hairstyleKey} for user ${userId} as base64 data`);
+            return base64DataUrl;
           }
         }
       }
@@ -77,8 +80,10 @@ export async function generateHairstyleWithGemini(
     functions.logger.warn("No image data found in Gemini response");
     functions.logger.info("Gemini text response:", response.text());
     
-    // Return a mock URL pointing to Firebase Hosting as fallback
-    return `https://hairstyle-stylish.web.app/images/generated/mock-${hairstyleKey}-${Date.now()}.jpg`;
+    // Return a simple 1x1 pixel transparent PNG as fallback base64
+    const fallbackBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+    functions.logger.warn(`Returning fallback base64 image for hairstyle ${hairstyleKey}`);
+    return fallbackBase64;
     
   } catch (error) {
     functions.logger.error("Error generating hairstyle with Gemini:", error);

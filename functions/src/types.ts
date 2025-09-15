@@ -91,6 +91,7 @@ export interface UploadHairstyleTemplateResponse {
 export interface HairstyleTemplate {
   key: string;
   name: string;
+  imageUrl: string;
   available: boolean;
 }
 

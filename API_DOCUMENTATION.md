@@ -87,7 +87,8 @@ interface GetUserCreditsResponse {
 - 驗證用戶是否有足夠點數（至少 1 點）
 - 使用 Firestore Transaction 安全扣除 1 點
 - 接收用戶照片和髮型選擇，使用 Gemini AI 生成新髮型圖片
-- 返回生成的髮型圖片 URL 和剩餘點數
+- 返回 Base64 編碼的圖片數據，適合立即顯示或本地儲存
+- 不會將生成的圖片儲存到 Firebase Storage，降低雲端儲存成本
 
 #### 📤 請求參數
 ```typescript
@@ -107,11 +108,16 @@ interface TryHairstyleRequest {
 ```typescript
 interface TryHairstyleResponse {
   success: boolean;
-  imageUrl?: string;     // 生成的髮型圖片 URL
+  imageUrl?: string;     // Base64 數據 URL (data:image/jpeg;base64,...)
   creditsLeft?: number;  // 剩餘點數
   error?: string;
 }
 ```
+
+**注意事項:**
+- `imageUrl` 欄位實際上包含的是 Base64 數據 URL
+- 格式為: `data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...`
+- 可以直接在前端顯示或儲存到本地裝置
 
 ---
 

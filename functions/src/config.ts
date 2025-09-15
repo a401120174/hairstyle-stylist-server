@@ -21,10 +21,10 @@ export const CREDIT_DEDUCTION_AMOUNT = 1;
 
 // Hairstyle file mapping configuration
 export const HAIRSTYLE_FILE_MAP: HairstyleFileMap = {
-  "classic-pompadour": "hairstyles/classic-pompadour.png",
-  "fade-buzz-cut": "hairstyles/fade-buzz-cut.png",
-  "messy-short-curls": "hairstyles/messy-short-curls.png",
-  "short-bob": "hairstyles/short-bob.jpg"
+  "classic-pompadour": "classic-pompadour.png",
+  "fade-buzz-cut": "fade-buzz-cut.png",
+  "messy-short-curls": "messy-short-curls.png",
+  "short-bob": "short-bob.jpg"
 };
 
 // Storage configuration

@@ -23,7 +23,7 @@ async function uploadHairstylesToStorage() {
 
   for (const hairstyle of hairstyles) {
     try {
-      const localFilePath = path.join(__dirname, 'functions', 'hair', hairstyle.file);
+      const localFilePath = path.join(__dirname, 'hair', hairstyle.file);
       
       if (!fs.existsSync(localFilePath)) {
         console.log(`❌ File not found: ${localFilePath}`);

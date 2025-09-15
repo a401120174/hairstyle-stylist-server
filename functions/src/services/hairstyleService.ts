@@ -9,6 +9,8 @@ import {
 } from "../types";
 import { deductUserCredits } from "./userService";
 import { generateHairstyleWithGemini, validateImageData } from "./aiService";
+import { getPublicUrl } from "./storageService";
+import { HAIRSTYLE_FILE_MAP } from "../config";
 
 /**
  * Validate hairstyle key
@@ -103,6 +105,7 @@ export async function getHairstyleTemplatesService(): Promise<GetHairstyleTempla
     const hairstyleInfo: HairstyleTemplate[] = VALID_HAIRSTYLES.map(key => ({
       key: key,
       name: key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+      imageUrl: getPublicUrl(HAIRSTYLE_FILE_MAP[key]),
       available: true // You could check Storage to see if the file exists
     }));
 

@@ -127,5 +127,6 @@ export async function deleteFile(filePath: string): Promise<boolean> {
  */
 export function getPublicUrl(filePath: string): string {
   const bucket = storage.bucket();
-  return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+  // Use simple Firebase Storage download URL format for public files
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media`;
 }

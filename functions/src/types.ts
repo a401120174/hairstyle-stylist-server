@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
+import { HAIRSTYLE_TEMPLATES } from "./hairstyleTemplates";
 
 /**
  * Represents the structure of a user document in Firestore
@@ -81,7 +82,7 @@ export interface HairstyleTemplate {
  */
 export interface GetHairstyleTemplatesResponse {
   success: boolean;
-  hairstyles?: HairstyleTemplate[];
+  hairstyles: typeof HAIRSTYLE_TEMPLATES;
   error?: string;
 }
 

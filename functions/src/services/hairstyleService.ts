@@ -7,7 +7,7 @@ import {
 } from "../types";
 import { deductUserCredits } from "./userService";
 import { generateHairstyleWithGemini, validateImageData } from "./aiService";
-import { isValidHairstyleKey, getAllHairstyleTemplates, getAllHairstyleKeys } from "../hairstyleTemplates";
+import { isValidHairstyleKey, getAllHairstyleKeys, HAIRSTYLE_TEMPLATES } from "../hairstyleTemplates";
 
 /**
  * Validate hairstyle key
@@ -101,7 +101,7 @@ export async function getHairstyleTemplatesService(): Promise<GetHairstyleTempla
   try {
     return {
       success: true,
-      hairstyles: getAllHairstyleTemplates()
+      hairstyles: HAIRSTYLE_TEMPLATES
     };
 
   } catch (error) {

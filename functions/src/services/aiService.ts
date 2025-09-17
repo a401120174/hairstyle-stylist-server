@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions";
 import { genAI, AI_CONFIG } from "../config";
 import { loadHairstyleImage } from "./storageService";
+import { HAIRSTYLE_TEMPLATES } from "../hairstyleTemplates";
 
 /**
  * Generate hairstyle using Gemini 2.5 Flash Image Preview API
@@ -25,20 +26,20 @@ export async function generateHairstyleWithGemini(
       throw new Error(`Hairstyle template not found for key: ${hairstyleKey}`);
     }
 
-    // Prepare the hairstyle transformation prompt
+    console.log("Loaded hairstyle:", hairstyleKey);
+
+    // Get the hairstyle prompt from templates
+    const allHairstyles = [...HAIRSTYLE_TEMPLATES.male_hairstyles, ...HAIRSTYLE_TEMPLATES.female_hairstyles];
+    const hairstyleTemplate = allHairstyles.find(template => template.key === hairstyleKey);
+    
+    if (!hairstyleTemplate) {
+      throw new Error(`Hairstyle template not found for key: ${hairstyleKey}`);
+    }
+
+    // Prepare the composite prompt with the specific hairstyle
     const hairstylePrompt = `
-    You are an expert hairstylist AI. Please help me change the hairstyle of the person in the first image to match the hairstyle shown in the second image.
-
-    Instructions:
-    1. Keep the person's face, facial features, and identity exactly the same
-    2. Only change the hairstyle to match the reference style in the second image
-    3. Maintain natural hair color and texture that suits the person
-    4. Make the result look realistic and professional
-    5. Ensure the lighting and background remain consistent with the original image
-    6. Pay attention to hair length, volume, and styling details from the reference
-    7. Generate a new image with the hairstyle transformation applied
-
-    Please return the transformed image maintaining the person's identity but with the new hairstyle.
+Give this person ${hairstyleTemplate.prompt}.
+Arrange these three views into a single composite image with the front view prominently at the top, and the side view on the bottom left, and the back view on the bottom right.
     `;
 
     // Prepare the content parts in the correct format

@@ -3,20 +3,17 @@ import {
   TryHairstyleRequest, 
   TryHairstyleResponse, 
   FunctionContext, 
-  VALID_HAIRSTYLES,
-  GetHairstyleTemplatesResponse,
-  HairstyleTemplate
+  GetHairstyleTemplatesResponse
 } from "../types";
 import { deductUserCredits } from "./userService";
 import { generateHairstyleWithGemini, validateImageData } from "./aiService";
-import { getPublicUrl } from "./storageService";
-import { HAIRSTYLE_FILE_MAP } from "../config";
+import { isValidHairstyleKey, getAllHairstyleTemplates, getAllHairstyleKeys } from "../hairstyleTemplates";
 
 /**
  * Validate hairstyle key
  */
 function validateHairstyleKey(hairstyleKey: string): boolean {
-  return VALID_HAIRSTYLES.includes(hairstyleKey as any);
+  return isValidHairstyleKey(hairstyleKey);
 }
 
 /**
@@ -54,7 +51,7 @@ export async function tryHairstyleService(
   if (!validateHairstyleKey(data.hairstyleKey)) {
     throw new functions.https.HttpsError(
       "invalid-argument",
-      `Invalid hairstyle key. Supported hairstyles: ${VALID_HAIRSTYLES.join(", ")}`
+      `Invalid hairstyle key. Supported hairstyles: ${getAllHairstyleKeys().join(", ")}`
     );
   }
 
@@ -102,16 +99,9 @@ export async function tryHairstyleService(
  */
 export async function getHairstyleTemplatesService(): Promise<GetHairstyleTemplatesResponse> {
   try {
-    const hairstyleInfo: HairstyleTemplate[] = VALID_HAIRSTYLES.map(key => ({
-      key: key,
-      name: key.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-      imageUrl: getPublicUrl(HAIRSTYLE_FILE_MAP[key]),
-      available: true // You could check Storage to see if the file exists
-    }));
-
     return {
       success: true,
-      hairstyles: hairstyleInfo
+      hairstyles: getAllHairstyleTemplates()
     };
 
   } catch (error) {

@@ -71,6 +71,7 @@ export interface VerifyPurchaseResponse {
 export interface HairstyleTemplate {
   key: string;
   name: string;
+  prompt: string;
   imageUrl: string;
   available: boolean;
 }
@@ -88,16 +89,6 @@ export interface GetHairstyleTemplatesResponse {
  * Context type for Firebase Functions
  */
 export type FunctionContext = functions.https.CallableContext;
-
-/**
- * Available hairstyle keys
- */
-export const VALID_HAIRSTYLES = ["classic-pompadour", "fade-buzz-cut", "messy-short-curls", "short-bob"] as const;
-
-/**
- * Type for valid hairstyle keys
- */
-export type HairstyleKey = typeof VALID_HAIRSTYLES[number];
 
 /**
  * Hairstyle file mapping
